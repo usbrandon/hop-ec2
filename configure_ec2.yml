@@ -1,0 +1,100 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Update and upgrade all packages
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+    - name: Install unzip, midnight commander (mc)
+      apt:
+        name:
+          - unzip
+          - mc
+        state: present
+
+    - name: Install python3-venv
+      apt:
+        name:
+          - python3
+          - python3-venv
+        state: present
+
+    - name: Create a virtual environment
+      command: python3 -m venv /home/ubuntu/venv
+
+    - name: Install boto3 in the virtual environment
+      pip:
+        name: boto3
+        virtualenv: /home/ubuntu/venv
+
+    - name: Write the Python script to get the environment
+      copy:
+        dest: "/home/ubuntu/getEnvironment.py"
+        content: |
+          #!/usr/bin/env python3
+          import boto3
+          import json
+
+          ssm = boto3.client('ssm', region_name='us-east-1')
+          response = ssm.get_parameter(Name='hop-development-environment', WithDecryption=True)
+          param_value = response['Parameter']['Value']
+          parsed_json = json.loads(param_value)
+          with open('dev.json', 'w') as outfile:
+              json.dump(parsed_json, outfile, indent=4)
+
+    - name: Make the Python script executable
+      file:
+        path: /home/ubuntu/getEnvironment.py
+        mode: '0755'
+
+    - name: Run the Python script
+      command: /home/ubuntu/venv/bin/python /home/ubuntu/getEnvironment.py
+
+    - name: Install Java 11 JRE Headless
+      apt:
+        name: openjdk-11-jre-headless
+        state: present
+
+    # Apache Hop download, unzip and setup tasks start here
+    - name: Ensure /opt/ directory exists
+      file:
+        path: /opt/
+        state: directory
+        mode: '0755'
+
+    - name: Download Apache Hop
+      get_url:
+        url: https://dlcdn.apache.org/hop/2.6.0/apache-hop-client-2.6.0.zip
+        dest: /opt/apache-hop-client-2.6.0.zip
+      timeout: 120  # set timeout to 120 seconds
+      register: result
+      until: result is succeeded
+      retries: 5
+      delay: 10
+
+    - name: Unzip Apache Hop to /opt/
+      unarchive:
+        src: /opt/apache-hop-client-2.6.0.zip
+        dest: /opt/
+        remote_src: yes
+        
+    - name: Ensure /opt/hop is owned by ubuntu
+      file:
+        path: /opt/hop
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      become: yes
+
+    - name: Remove the downloaded zip after extraction
+      file:
+        path: /opt/apache-hop-client-2.6.0.zip
+        state: absent
+    - name: Reboot the EC2 instance
+      command: sudo reboot
+      async: 1
+      poll: 0
+      ignore_errors: true
+

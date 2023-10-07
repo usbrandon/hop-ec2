@@ -1,0 +1,23 @@
+{
+  "variables" : [ {
+    "name" : "STAGING_HOST",
+    "value" : "192.168.2.100",
+    "description" : "Hostname of the database"
+  }, {
+    "name" : "STAGING_DATABASE",
+    "value" : "dev",
+    "description" : "Database name containing the schemas"
+  }, {
+    "name" : "STAGING_SCHEMA",
+    "value" : "staging",
+    "description" : "Name of the schema for doing staging work."
+  }, {
+    "name" : "STAGING_USERNAME",
+    "value" : "etluser",
+    "description" : "User with access to dev for staging"
+  }, {
+    "name" : "STAGING_PASSWORD",
+    "value" : "SimplePassword",
+    "description" : "Password to postgres dev for staging"
+  } ]
+}

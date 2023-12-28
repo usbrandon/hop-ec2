@@ -1,0 +1,5 @@
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+inventory.ini
+connect_to_ec2.sh

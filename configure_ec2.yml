@@ -66,8 +66,8 @@
 
     - name: Download Apache Hop
       get_url:
-        url: https://dlcdn.apache.org/hop/2.6.0/apache-hop-client-2.6.0.zip
-        dest: /opt/apache-hop-client-2.6.0.zip
+        url: https://dlcdn.apache.org/hop/2.7.0/apache-hop-client-2.7.0.zip
+        dest: /opt/apache-hop-client-2.7.0.zip
       timeout: 120  # set timeout to 120 seconds
       register: result
       until: result is succeeded
@@ -76,7 +76,7 @@
 
     - name: Unzip Apache Hop to /opt/
       unarchive:
-        src: /opt/apache-hop-client-2.6.0.zip
+        src: /opt/apache-hop-client-2.7.0.zip
         dest: /opt/
         remote_src: yes
         
@@ -90,8 +90,126 @@
 
     - name: Remove the downloaded zip after extraction
       file:
-        path: /opt/apache-hop-client-2.6.0.zip
+        path: /opt/apache-hop-client-2.7.0.zip
         state: absent
+
+    # Tasks to create required directories
+    - name: Ensure /opt/hop-jdbc is owned by ubuntu
+      file:
+        path: /opt/hop-jdbc
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      become: yes
+
+    - name: Ensure /opt/hop-config is owned by ubuntu
+      file:
+        path: /opt/hop-config
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      become: yes
+
+    - name: Ensure /opt/hop-audit is owned by ubuntu
+      file:
+        path: /opt/hop-audit
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      become: yes
+
+    - name: Ensure /opt/hop-plugins is owned by ubuntu
+      file:
+        path: /opt/hop-plugins
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      become: yes
+
+    - name: Add /opt/hop to PATH for ubuntu user
+      lineinfile:
+        path: /home/ubuntu/.profile
+        line: 'export PATH="$PATH:/opt/hop"'
+        create: yes
+      become: no
+
+    - name: Create aliases for hop scripts
+      block:
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-conf="/opt/hop/hop-conf.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-encrypt="/opt/hop/hop-encrypt.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-gui="/opt/hop/hop-gui.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-import="/opt/hop/hop-import.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-run="/opt/hop/hop-run.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-search="/opt/hop/hop-search.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-server="/opt/hop/hop-server.sh"'
+            create: yes
+
+        - lineinfile:
+            path: /home/ubuntu/.bashrc
+            line: 'alias hop-translator="/opt/hop/hop-translator.sh"'
+            create: yes
+
+    # Set environment variables
+    - name: Set HOP_SHARED_JDBC_FOLDERS environment variable
+      lineinfile:
+        path: /etc/environment
+        line: 'HOP_SHARED_JDBC_FOLDERS=/opt/hop/lib/jdbc,/opt/hop-jdbc'
+        create: yes
+
+    - name: Set HOP_CONFIG_FOLDER environment variable
+      lineinfile:
+        path: /etc/environment
+        line: 'HOP_CONFIG_FOLDER=/opt/hop-config'
+        create: yes
+
+    - name: Set HOP_AUDIT_FOLDER environment variable
+      lineinfile:
+        path: /etc/environment
+        line: 'HOP_AUDIT_FOLDER=/opt/hop-audit'
+        create: yes
+
+    - name: Set HOP_PLUGIN_BASE_FOLDERS environment variable
+      lineinfile:
+        path: /etc/environment
+        line: 'HOP_PLUGIN_BASE_FOLDERS=/opt/hop/plugins,/opt/hop-plugins'
+        create: yes
+
+    # Calculate memory for HOP_OPTIONS
+    - name: Gather facts
+      setup:
+
+    - name: Set HOP_OPTIONS environment variable with memory calculation
+      lineinfile:
+        path: /etc/environment
+        line: "HOP_OPTIONS=-Xmx{{ ((ansible_memtotal_mb * 0.8) // 1) | int }}M"
+        create: yes
+
     - name: Reboot the EC2 instance
       command: sudo reboot
       async: 1

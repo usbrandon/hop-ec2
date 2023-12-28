@@ -35,6 +35,11 @@ resource "aws_security_group" "allow_ssh" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+    tags = {
+    Name         = "allow_ssh"
+    PROJECT_NAME = "apache_hop"
+  }
 }
 
 # IAM role to be assumed by EC2 to access SSM parameter.
@@ -51,6 +56,11 @@ resource "aws_iam_role" "ssm_role" {
       }
     }]
   })
+
+    tags = {
+    Name         = "allow_ssh"
+    PROJECT_NAME = "apache_hop"
+  }
 }
 
 # IAM policy to allow EC2 to read the specific SSM parameter.
@@ -84,12 +94,22 @@ resource "aws_ssm_parameter" "hop_dev_env" {
   name  = "hop-development-environment"
   type  = "String"
   value = local.dev_json_content
+
+  tags = {
+    Name         = "hop-development-environment"
+    PROJECT_NAME = "apache_hop"
+  }
 }
 
 # Uploads the local public key to AWS, making it usable for EC2 instances.
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
   public_key = file("id_ed25519.pub")
+
+  tags = {
+    Name = "deployer-key"
+    PROJECT_NAME = "apache_hop"
+  }
 }
 
 # EC2 instance creation.
@@ -102,6 +122,7 @@ resource "aws_instance" "hop" {
 
   tags = {
     Name = "hop-ec2"
+    PROJECT_NAME = "apache_hop"
   }
 }
 

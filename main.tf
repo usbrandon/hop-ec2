@@ -80,6 +80,56 @@ resource "aws_iam_role_policy" "ssm_policy" {
   })
 }
 
+resource "aws_iam_policy" "ssm_policy" {
+  name   = "SSMReadPolicy"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = [
+        "ssm:GetParameter"
+      ],
+      Effect   = "Allow",
+      Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/hop-development-environment"
+    }]
+  })
+}
+
+resource "aws_iam_policy_attachment" "ssm_policy_attachment" {
+  name       = "SSMPolicyAttachment"
+  roles      = [aws_iam_role.ssm_role.name]
+  policy_arn = aws_iam_policy.ssm_policy.arn
+}
+
+resource "aws_iam_policy" "s3_access_policy" {
+  name   = "S3ReadWriteListPolicy"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Effect   = "Allow",
+        Resource = [
+          "arn:aws:s3:::hop-audit-logs-2023-12-28",
+          "arn:aws:s3:::hop-audit-logs-2023-12-28/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy_attachment" "s3_policy_attachment" {
+  name       = "S3PolicyAttachment"
+  roles      = [aws_iam_role.ssm_role.name]
+  policy_arn = aws_iam_policy.s3_access_policy.arn
+}
+
+
+
 # IAM instance profile to be associated with EC2.
 resource "aws_iam_instance_profile" "ssm_instance_profile" {
   name = "SSMInstanceProfile"
@@ -175,5 +225,15 @@ resource "local_file" "ssh_script_linux" {
   # Makes the .sh script executable.
   provisioner "local-exec" {
     command = "chmod 0755 ${self.filename}"
+  }
+}
+
+# S3 Bucket for Audit Logs
+resource "aws_s3_bucket" "hop_audit_logs" {
+  bucket = "hop-audit-logs-2023-12-28"
+
+  tags = {
+    Name         = "hop_audit_logs"
+    PROJECT_NAME = "apache_hop"
   }
 }

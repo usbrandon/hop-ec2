@@ -14,6 +14,44 @@
           - mc
         state: present
 
+    # Download and Install AWS CLI
+    - name: Download AWS CLI 2.x
+      get_url:
+        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+        dest: /tmp/awscliv2.zip
+        mode: '0644'
+
+    - name: Unzip AWS CLI
+      unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Install AWS CLI
+      command: /tmp/aws/install
+      args:
+        creates: /usr/local/bin/aws
+
+    - name: Remove AWS CLI installer files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/awscliv2.zip
+        - /tmp/aws
+
+    - name: Check AWS CLI version
+      command: aws --version
+      register: aws_version
+      changed_when: false
+
+    - debug:
+        msg: "{{ aws_version.stdout }}"
+
+    # Optionally, configure AWS CLI (you can skip or modify these steps based on your needs)
+    #- name: Configure AWS CLI default region
+    #  command: aws configure set default.region us-east-1
+
     - name: Install python3-venv
       apt:
         name:
@@ -57,12 +95,17 @@
         name: openjdk-11-jre-headless
         state: present
 
-    # Apache Hop download, unzip and setup tasks start here
+    - name: Check if /opt/hop exists
+      stat:
+        path: /opt/hop
+      register: hop_dir
+
     - name: Ensure /opt/ directory exists
       file:
         path: /opt/
         state: directory
         mode: '0755'
+      when: not hop_dir.stat.exists
 
     - name: Download Apache Hop
       get_url:
@@ -73,13 +116,15 @@
       until: result is succeeded
       retries: 5
       delay: 10
+      when: not hop_dir.stat.exists
 
     - name: Unzip Apache Hop to /opt/
       unarchive:
         src: /opt/apache-hop-client-2.7.0.zip
         dest: /opt/
         remote_src: yes
-        
+      when: not hop_dir.stat.exists
+
     - name: Ensure /opt/hop is owned by ubuntu
       file:
         path: /opt/hop
@@ -87,11 +132,14 @@
         group: ubuntu
         recurse: yes
       become: yes
+      when: not hop_dir.stat.exists
 
     - name: Remove the downloaded zip after extraction
       file:
         path: /opt/apache-hop-client-2.7.0.zip
         state: absent
+      when: not hop_dir.stat.exists
+
 
     # Tasks to create required directories
     - name: Ensure /opt/hop-jdbc is owned by ubuntu

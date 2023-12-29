@@ -14,6 +14,13 @@
           - mc
         state: present
 
+    - name: Install s3fs so we can mount S3 buckets later
+      apt:
+        name:
+          - s3fs
+          - libfuse2
+        state: present
+
     # Download and Install AWS CLI
     - name: Download AWS CLI 2.x
       get_url:
@@ -165,6 +172,16 @@
         group: ubuntu
         recurse: yes
       become: yes
+
+    - name: Add S3 bucket mount to /etc/fstab for /opt/hop-audit
+      lineinfile:
+        path: /etc/fstab
+        line: 'hop-audit-logs-2023-12-28 /opt/hop-audit fuse.s3fs _netdev,allow_other,use_path_request_style,iam_role=auto 0 0'
+        state: present
+
+    # Optional: Remount all filesystems
+    - name: Remount filesystems
+      command: mount -a
 
     - name: Ensure /opt/hop-plugins is owned by ubuntu
       file:

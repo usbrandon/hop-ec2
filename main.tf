@@ -110,17 +110,27 @@ resource "aws_iam_policy" "s3_access_policy" {
           "s3:ListBucket",
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:PutObjectAcl",
+          "s3:GetBucketAcl",
+          "s3:PutBucketAcl"
         ],
         Effect   = "Allow",
         Resource = [
           "arn:aws:s3:::hop-audit-logs-2023-12-28",
           "arn:aws:s3:::hop-audit-logs-2023-12-28/*"
         ]
+      },
+      {
+        Effect   = "Allow",
+        Action   = "s3:ListAllMyBuckets",
+        Resource = "*"
       }
     ]
   })
 }
+
+
 
 resource "aws_iam_policy_attachment" "s3_policy_attachment" {
   name       = "S3PolicyAttachment"

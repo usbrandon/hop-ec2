@@ -173,10 +173,14 @@
         recurse: yes
       become: yes
 
+    - name: Get S3 bucket name from file
+      shell: "cat ./bucket_name.txt"
+      register: bucket_name
+
     - name: Add S3 bucket mount to /etc/fstab for /opt/hop-audit
       lineinfile:
         path: /etc/fstab
-        line: 'hop-audit-logs-2023-12-28 /opt/hop-audit fuse.s3fs _netdev,allow_other,use_path_request_style,iam_role=auto 0 0'
+        line: "{{ bucket_name.stdout }} /opt/hop-audit fuse.s3fs _netdev,allow_other,use_path_request_style,iam_role=auto 0 0"
         state: present
 
     # Optional: Remount all filesystems
@@ -274,6 +278,23 @@
         path: /etc/environment
         line: "HOP_OPTIONS=-Xmx{{ ((ansible_memtotal_mb * 0.8) // 1) | int }}M"
         create: yes
+
+    # Bring over custom configuration for Hop.
+    - name: Copy setup-hop-environment.sh to /home/ubuntu
+      copy:
+        src: ./hop-environment/setup-hop-environment.sh
+        dest: /home/ubuntu/setup-hop-environment.sh
+
+    - name: Copy introduce-project-to-hop.sh to /home/ubuntu
+      copy:
+        src: ./hop-environment/introduce-project-to-hop.sh
+        dest: /home/ubuntu/introduce-project-to-hop.sh
+
+    - name: Synchronize entire directory metedata from local to remote /opt/hop/config/projects/samples/metadata
+      ansible.builtin.synchronize:
+        src: ./hop-environment/metadata/
+        dest: /opt/hop/config/projects/samples/metadata/
+        recursive: yes    
 
     - name: Reboot the EC2 instance
       command: sudo reboot

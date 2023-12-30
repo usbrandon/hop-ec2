@@ -15,6 +15,17 @@ variable "region" {
   default     = "us-east-1"
 }
 
+provider "random" {
+  # Configuration for the random provider
+}
+
+resource "random_string" "bucket_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+  numeric  = true
+}
+
 # Security Group allowing SSH traffic.
 resource "aws_security_group" "allow_ssh" {
   name        = "allow_ssh"
@@ -240,10 +251,16 @@ resource "local_file" "ssh_script_linux" {
 
 # S3 Bucket for Audit Logs
 resource "aws_s3_bucket" "hop_audit_logs" {
-  bucket = "hop-audit-logs-2023-12-28"
+  bucket = "hop-audit-logs-${random_string.bucket_suffix.result}"
 
   tags = {
     Name         = "hop_audit_logs"
     PROJECT_NAME = "apache_hop"
   }
+}
+
+# Output the S3 bucket name to a text file
+resource "local_file" "bucket_name_file" {
+  content  = aws_s3_bucket.hop_audit_logs.bucket
+  filename = "${path.module}/bucket_name.txt"
 }

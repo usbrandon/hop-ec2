@@ -55,7 +55,7 @@ resource "aws_security_group" "allow_ssh" {
 
 # IAM role to be assumed by EC2 to access SSM parameter.
 resource "aws_iam_role" "ssm_role" {
-  name = "SSMParameterRoleForEC2"
+  name = "HopRoleForEC2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -128,8 +128,8 @@ resource "aws_iam_policy" "s3_access_policy" {
         ],
         Effect   = "Allow",
         Resource = [
-          "arn:aws:s3:::hop-audit-logs-2023-12-28",
-          "arn:aws:s3:::hop-audit-logs-2023-12-28/*"
+          "arn:aws:s3:::${aws_s3_bucket.hop_audit_logs.bucket}",
+          "arn:aws:s3:::${aws_s3_bucket.hop_audit_logs.bucket}/*"
         ]
       },
       {

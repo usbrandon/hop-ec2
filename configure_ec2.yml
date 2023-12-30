@@ -14,6 +14,7 @@
           - mc
         state: present
 
+    # Here we will install s3fs and configure fuse to allow other users to access the mounted S3 bucket
     - name: Install s3fs so we can mount S3 buckets later
       apt:
         name:
@@ -21,24 +22,57 @@
           - libfuse2
         state: present
 
+    - name: Enable user_allow_other in /etc/fuse.conf
+      lineinfile:
+        path: /etc/fuse.conf
+        regexp: '^#?user_allow_other'
+        line: 'user_allow_other'
+        state: present
+      become: yes
+
     # Download and Install AWS CLI
+     # Check AWS CLI version
+    - name: Check AWS CLI version
+      command: aws --version
+      register: aws_cli_version
+      ignore_errors: yes
+      changed_when: false
+
+    # Set desired AWS CLI version
+    - name: Set minimum required AWS CLI version
+      set_fact:
+        min_aws_cli_version: "2.15.6"
+
+    # Compare installed AWS CLI version with minimum required version
+    - name: Compare AWS CLI versions
+      set_fact:
+        aws_cli_update_needed: "{{ ('aws-cli/' + min_aws_cli_version) not in aws_cli_version.stdout }}"
+      when: aws_cli_version.rc == 0
+
+    # Download AWS CLI 2.x if not installed or if update is needed
     - name: Download AWS CLI 2.x
       get_url:
         url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
         dest: /tmp/awscliv2.zip
         mode: '0644'
+      when: aws_cli_version.rc != 0 or aws_cli_update_needed
 
+    # Unzip AWS CLI if needed
     - name: Unzip AWS CLI
       unarchive:
         src: /tmp/awscliv2.zip
         dest: /tmp/
         remote_src: yes
+      when: aws_cli_version.rc != 0 or aws_cli_update_needed
 
+    # Install AWS CLI if needed
     - name: Install AWS CLI
       command: /tmp/aws/install
       args:
         creates: /usr/local/bin/aws
+      when: aws_cli_version.rc != 0 or aws_cli_update_needed
 
+    # Remove AWS CLI installer files if installation occurred
     - name: Remove AWS CLI installer files
       file:
         path: "{{ item }}"
@@ -46,18 +80,7 @@
       with_items:
         - /tmp/awscliv2.zip
         - /tmp/aws
-
-    - name: Check AWS CLI version
-      command: aws --version
-      register: aws_version
-      changed_when: false
-
-    - debug:
-        msg: "{{ aws_version.stdout }}"
-
-    # Optionally, configure AWS CLI (you can skip or modify these steps based on your needs)
-    #- name: Configure AWS CLI default region
-    #  command: aws configure set default.region us-east-1
+      when: aws_cli_version.rc != 0 or aws_cli_update_needed
 
     - name: Install python3-venv
       apt:
@@ -165,6 +188,14 @@
         recurse: yes
       become: yes
 
+    # In this section we will mount the S3 bucket to /opt/hop-audit
+    # We will create the directory if it doesn't exist
+    - name: Check if /opt/hop-audit is mounted
+      ansible.builtin.shell: mount | grep /opt/hop-audit
+      register: hop_audit_mounted
+      ignore_errors: yes
+      changed_when: false
+
     - name: Ensure /opt/hop-audit is owned by ubuntu
       file:
         path: /opt/hop-audit
@@ -172,16 +203,19 @@
         group: ubuntu
         recurse: yes
       become: yes
+      when: hop_audit_mounted.rc != 0
 
-    - name: Get S3 bucket name from file
-      shell: "cat ./bucket_name.txt"
-      register: bucket_name
+
+    - name: Get S3 bucket name from local file
+      set_fact:
+        bucket_name: "{{ lookup('file', './bucket_name.txt') }}"
 
     - name: Add S3 bucket mount to /etc/fstab for /opt/hop-audit
       lineinfile:
         path: /etc/fstab
-        line: "{{ bucket_name.stdout }} /opt/hop-audit fuse.s3fs _netdev,allow_other,use_path_request_style,iam_role=auto 0 0"
+        line: "{{ bucket_name }} /opt/hop-audit fuse.s3fs _netdev,allow_other,use_path_request_style,iam_role=auto,nonempty 0 0"
         state: present
+
 
     # Optional: Remount all filesystems
     - name: Remount filesystems
@@ -284,17 +318,26 @@
       copy:
         src: ./hop-environment/setup-hop-environment.sh
         dest: /home/ubuntu/setup-hop-environment.sh
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
 
     - name: Copy introduce-project-to-hop.sh to /home/ubuntu
       copy:
         src: ./hop-environment/introduce-project-to-hop.sh
         dest: /home/ubuntu/introduce-project-to-hop.sh
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
 
-    - name: Synchronize entire directory metedata from local to remote /opt/hop/config/projects/samples/metadata
-      ansible.builtin.synchronize:
+    - name: Synchronize entire directory metadata from local to remote /opt/hop/config/projects/samples/metadata
+      ansible.posix.synchronize:
         src: ./hop-environment/metadata/
         dest: /opt/hop/config/projects/samples/metadata/
-        recursive: yes    
+        recursive: yes
+        set_remote_user: yes
+        rsync_opts:
+          - "--chown=ubuntu:ubuntu"
 
     - name: Reboot the EC2 instance
       command: sudo reboot

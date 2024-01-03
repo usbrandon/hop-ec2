@@ -1,0 +1,70 @@
+{
+    "agent": {
+            "metrics_collection_interval": 60,
+            "run_as_user": "cwagent"
+    },
+    "logs": {
+            "logs_collected": {
+                    "files": {
+                            "collect_list": [
+                                    {
+                                            "file_path": "/opt/hop-audit/hop.log",
+                                            "log_group_class": "STANDARD",
+                                            "log_group_name": "hop.log",
+                                            "log_stream_name": "{instance_id}",
+                                            "retention_in_days": 30
+                                    }
+                            ]
+                    }
+            }
+    },
+    "metrics": {
+            "aggregation_dimensions": [
+                    [
+                            "InstanceId"
+                    ]
+            ],
+            "append_dimensions": {
+                    "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+                    "ImageId": "${aws:ImageId}",
+                    "InstanceId": "${aws:InstanceId}",
+                    "InstanceType": "${aws:InstanceType}"
+            },
+            "metrics_collected": {
+                    "disk": {
+                            "measurement": [
+                                    "used_percent"
+                            ],
+                            "metrics_collection_interval": 60,
+                            "resources": [
+                                    "*"
+                            ]
+                    },
+                    "mem": {
+                            "measurement": [
+                                    "mem_used_percent"
+                            ],
+                            "metrics_collection_interval": 60
+                    },
+                    "statsd": {
+                            "metrics_aggregation_interval": 60,
+                            "metrics_collection_interval": 10,
+                            "service_address": ":8125"
+                    }
+            }
+    },
+    "traces": {
+            "buffer_size_mb": 3,
+            "concurrency": 8,
+            "insecure": false,
+            "region_override": "us-east-1",
+            "traces_collected": {
+                    "xray": {
+                            "bind_address": "127.0.0.1:2000",
+                            "tcp_proxy": {
+                                    "bind_address": "127.0.0.1:2000"
+                            }
+                    }
+            }
+    }
+}

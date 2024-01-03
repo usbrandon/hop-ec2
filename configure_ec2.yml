@@ -30,6 +30,23 @@
         state: present
       become: yes
 
+    # Here we will install the Amazon CloudWatch Agent to send EC2 metrics to CloudWatch
+    # We will also send Hop Logs to CloudWatch
+    - name: Download Amazon CloudWatch Agent .deb
+      ansible.builtin.get_url:
+        url: https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+        dest: /tmp/amazon-cloudwatch-agent.deb
+
+    - name: Install Amazon CloudWatch Agent
+      ansible.builtin.apt:
+        deb: /tmp/amazon-cloudwatch-agent.deb
+
+    - name: Ensure Amazon CloudWatch Agent service is enabled and started
+      ansible.builtin.systemd:
+        name: amazon-cloudwatch-agent
+        enabled: yes
+        state: started
+
     # Download and Install AWS CLI
      # Check AWS CLI version
     - name: Check AWS CLI version

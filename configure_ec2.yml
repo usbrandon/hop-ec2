@@ -347,6 +347,14 @@
         group: ubuntu
         mode: '0755'
 
+    - name: Copy run-hop-sample.sh to /home/ubuntu
+      copy:
+        src: ./hop-environment/run-hop-sample.sh
+        dest: /home/ubuntu/run-hop-sample.sh
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
     - name: Synchronize entire directory metadata from local to remote /opt/hop/config/projects/samples/metadata
       ansible.posix.synchronize:
         src: ./hop-environment/metadata/
@@ -354,7 +362,7 @@
         recursive: yes
         set_remote_user: yes
         rsync_opts:
-          - "--chown=ubuntu:ubuntu"
+          - "--quiet --chown=ubuntu:ubuntu"
 
     - name: Reboot the EC2 instance
       command: sudo reboot

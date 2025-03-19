@@ -1,5 +1,5 @@
 #!/bin/bash
-hop-conf \
+/opt/hop/hop-conf.sh \
      --environment-create \
      --environment="Development" \
      --environment-project="Samples"  \

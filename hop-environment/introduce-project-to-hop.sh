@@ -1,5 +1,5 @@
 #!/bin/bash
-hop-conf \
+/opt/hop/hop-conf.sh \
       --project="Samples" \
       --project-create \
       --project-home="/opt/hop/config/projects/samples" \

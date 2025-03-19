@@ -185,7 +185,7 @@ resource "aws_key_pair" "deployer" {
 
 # EC2 instance creation.
 resource "aws_instance" "hop" {
-  ami                    = "ami-053b0d53c279acc90"
+  ami                    = "ami-04b4f1a9cf54c11d0"
   instance_type          = "t2.micro"
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]

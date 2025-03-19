@@ -137,9 +137,9 @@
     - name: Run the Python script
       command: /home/ubuntu/venv/bin/python /home/ubuntu/getEnvironment.py
 
-    - name: Install Java 11 JRE Headless
+    - name: Install Java 17 JRE Headless
       apt:
-        name: openjdk-11-jre-headless
+        name: openjdk-17-jre-headless
         state: present
 
     - name: Check if /opt/hop exists
@@ -156,8 +156,8 @@
 
     - name: Download Apache Hop
       get_url:
-        url: https://dlcdn.apache.org/hop/2.7.0/apache-hop-client-2.7.0.zip
-        dest: /opt/apache-hop-client-2.7.0.zip
+        url: https://dlcdn.apache.org/hop/2.12.0/apache-hop-client-2.12.0.zip
+        dest: /opt/apache-hop-client-2.12.0.zip
       timeout: 120  # set timeout to 120 seconds
       register: result
       until: result is succeeded
@@ -167,7 +167,7 @@
 
     - name: Unzip Apache Hop to /opt/
       unarchive:
-        src: /opt/apache-hop-client-2.7.0.zip
+        src: /opt/apache-hop-client-2.12.0.zip
         dest: /opt/
         remote_src: yes
       when: not hop_dir.stat.exists
@@ -183,7 +183,7 @@
 
     - name: Remove the downloaded zip after extraction
       file:
-        path: /opt/apache-hop-client-2.7.0.zip
+        path: /opt/apache-hop-client-2.12.0.zip
         state: absent
       when: not hop_dir.stat.exists
 
